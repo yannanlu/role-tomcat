@@ -2,3 +2,4 @@
 dependencies:
   - role: monit
   - role: java
+  - { role: "{{'nginx' if web_frontend == 'nginx' else 'apache'}}", when: web_frontend == 'nginx' or web_frontend == 'apache' }

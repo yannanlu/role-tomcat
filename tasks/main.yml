@@ -16,12 +16,24 @@
     is_readonly: "{{tomcat_is_readonly}}"
   notify: Restart_tomcat.service
 
+- name: Template of tomcat.conf
+  template:
+    src: tomcat.conf.j2
+    dest: "{{tomcat_dir}}/tomcat.conf"
+    owner: root
+    group: "{{tomcat_group}}"
+    mode: 0644
+  vars:
+    java_opts: "{{tomcat_java_opts|default('')}}"
+  notify: Restart_tomcat.service
+
 - name: Create symlinks
   file:
     src: "{{item.path}}"
     dest: "{{tomcat_basedir}}/{{item.dest}}"
     state: link
     force: yes
+    follow: no
     owner: "{{tomcat_user}}"
     group: "{{tomcat_group}}"
     mode: 0775
@@ -49,4 +61,4 @@
   notify: Restart_monit.service
 
 - include: selinux.yml
-  when: ansible_distribution in ['RedHat', 'CentOS'] 
+  when: ansible_distribution in ['RedHat', 'CentOS']
