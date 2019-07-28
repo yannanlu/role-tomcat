@@ -1,64 +1,93 @@
 ---
-- name: Install Tomcat package
-  package:
-    name: "{{tomcat_pkg_name}}"
+- name: Create group account for tomcat
+  group:
+    name: "{{tomcat_group}}"
     state: present
-    update_cache: yes
 
-- name: Template of web.xml
-  template:
-    src: web.xml.j2
-    dest: "{{tomcat_dir}}/web.xml"
-    owner: root
+- name: Create user account for tomcat
+  user:
+    name: "{{tomcat_user}}"
+    comment: Tomcat
     group: "{{tomcat_group}}"
-    mode: 0644
-  vars:
-    is_readonly: "{{tomcat_is_readonly}}"
-  notify: Restart_tomcat.service
+    state: present
+    shell: /sbin/nologin
+    home: "{{tomcat_basedir}}"
+    createhome: no
 
-- name: Template of tomcat.conf
-  template:
-    src: tomcat.conf.j2
-    dest: "{{tomcat_dir}}/tomcat.conf"
-    owner: root
-    group: "{{tomcat_group}}"
-    mode: 0644
-  vars:
-    java_opts: "{{tomcat_java_opts|default('')}}"
-  notify: Restart_tomcat.service
+- name: Modify limits.conf on nofile
+  pam_limits:
+    domain: "{{tomcat_user}}"
+    limit_type: "{{ item }}"
+    limit_item: nofile
+    value: "{{tomcat_nofile_limit}}"
+  with_items:
+   - hard
+   - soft      
 
-- name: Create symlinks
+- name: Modify limits.conf on stack
+  pam_limits:
+    domain: "{{tomcat_user}}"
+    limit_type: "{{ item }}"
+    limit_item: stack
+    value: "{{tomcat_stack_limit}}"
+  with_items:
+    - hard
+    - soft
+
+- name: Create dirs of /opt and /var/cache/ansible
   file:
-    src: "{{item.path}}"
-    dest: "{{tomcat_basedir}}/{{item.dest}}"
-    state: link
-    force: yes
-    follow: no
-    owner: "{{tomcat_user}}"
-    group: "{{tomcat_group}}"
-    mode: 0775
-  with_items: "{{tomcat_links}}"
-  when: tomcat_links|length > 0
+    path: "{{item}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - /opt
+    - /var/cache/ansible
 
-- name: Get stats of monitrc
+- name: Get stats of tomcat tarball
   stat:
-    path: "{{monit_dir}}/monitrc"
+    path: "/var/cache/ansible/{{tomcat_pkg_name}}-{{tomcat_version}}.tar.gz"
     get_md5: no
     get_checksum: no
-  register: st_monitrc
+  register: st_tomcat_tarball
 
-- name: Template of tomcat.monit
-  template:
-    src: tomcat.monit.j2
-    dest: "{{monit_includedir}}/tomcat.monit"
-    mode: 0644
-  vars:
-    pattern: '.base={{tomcat_basedir}} '
-    port: "{{tomcat_port}}"
-    start_program: '/usr/bin/systemctl start {{tomcat_pkg_name}}'
-    stop_program: '/usr/bin/systemctl stop {{tomcat_pkg_name}}'
-  when: st_monitrc.stat.exists
-  notify: Restart_monit.service
+- name: Gets the tarball
+  get_url:
+    url: "{{tomcat_repo_url}}/v{{tomcat_version}}/bin/{{tomcat_pkg_name}}-{{tomcat_version}}.tar.gz"
+    dest: /var/cache/ansible/
+  when: not st_tomcat_tarball.stat.exists
+  register: new_archive_tomcat
+
+- name: Get stats of /opt/tomcat
+  stat:
+    path: "/opt/{{tomcat_pkg_name}}-{{tomcat_version}}"
+    get_md5: no
+    get_checksum: no
+  register: st_tomcat
+
+- name: Unarchive source
+  unarchive:
+    src: "/var/cache/ansible/{{tomcat_pkg_name}}-{{tomcat_version}}.tar.gz"
+    dest: /opt
+    remote_src: yes
+    owner: "{{tomcat_user}}"
+    group: "{{tomcat_group}}"
+  when: new_archive_tomcat is changed or not st_tomcat.stat.exists
+
+- name: reset ownership
+  file:
+    dest: "/opt/{{tomcat_pkg_name}}-{{tomcat_version}}"
+    recurse: yes
+    owner: "{{tomcat_user}}"
+    group: "{{tomcat_group}}"
+  changed_when: False
+
+- name: Create symlink of /opt/tomcat
+  file:
+    src: "/opt/{{tomcat_pkg_name}}-{{tomcat_version}}"
+    dest: /opt/tomcat
+    state: link
 
 - include: selinux.yml
   when: ansible_distribution in ['RedHat', 'CentOS']

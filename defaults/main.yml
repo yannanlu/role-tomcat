@@ -1,15 +1,20 @@
 ---
 tomcat_port: 8080
+tomcat_ajp_port: 8009
+tomcat_shutdown_port: 8005
+tomcat_redirect_port: 8443
 tomcat_bind_ip: 127.0.0.1
-tomcat_se_mode: ''
 tomcat_is_readonly: 'true'
+tomcat_user: tomcat
+tomcat_group: tomcat
+tomcat_basedir: /opt/tomcat
+tomcat_logdir: /var/log/tomcat
 
-tomcat_pkg_name: "{{ 'tomcat' if ansible_distribution in ['RedHat','CentOS'] else 'tomcat7' }}"
-tomcat_pkg_version: "{{ '7.0.76-2.el7' if ansible_distribution in ['RedHat','CentOS'] else '7.0.68-1ubuntu0.1' }}"
-tomcat_dir: "{{ '/etc/tomcat' if ansible_distribution in ['RedHat','CentOS'] else '/etc/tomcat7' }}"
-tomcat_basedir: "{{ '/usr/share/tomcat' if ansible_distribution in ['RedHat','CentOS'] else '/var/lib/tomcat7' }}"
-tomcat_logdir: "{{ '/var/log/tomcat' if ansible_distribution in ['RedHat','CentOS'] else '/var/log/tomcat7' }}"
-tomcat_user: "{{ 'tomcat' if ansible_distribution in ['RedHat','CentOS'] else 'tomcat7' }}"
-tomcat_group: "{{ 'tomcat' if ansible_distribution in ['RedHat','CentOS'] else 'tomcat7' }}"
+tomcat_nofile_limit: 20480
+tomcat_stack_limit: 512
+tomcat_pidfile: /opt/tomcat/data/tomcat.pid
+tomcat_pkg_name: apache-tomcat
+tomcat_version: 8.5.43
+tomcat_repo_url: https://www-eu.apache.org/dist/tomcat/tomcat-8
 
 tomcat_links: []
