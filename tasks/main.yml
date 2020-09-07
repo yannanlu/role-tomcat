@@ -11,7 +11,7 @@
     group: "{{tomcat_group}}"
     state: present
     shell: /sbin/nologin
-    home: "{{tomcat_basedir}}"
+    home: "{{tomcat_dir}}"
     createhome: no
 
 - name: Modify limits.conf on nofile
@@ -52,7 +52,7 @@
     get_checksum: no
   register: st_tomcat_tarball
 
-- name: Gets the tarball
+- name: Gets the tarball from {{tomcat_repo_url}}
   get_url:
     url: "{{tomcat_repo_url}}/v{{tomcat_version}}/bin/{{tomcat_pkg_name}}-{{tomcat_version}}.tar.gz"
     dest: /var/cache/ansible/
